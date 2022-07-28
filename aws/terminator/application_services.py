@@ -158,12 +158,14 @@ class KinesisStream(Terminator):
                 }
             ).build_full_result()['StreamNames']
 
-            if not names:
-                return []
-
-            return [
-                client.describe_stream(StreamName=n)['StreamDescription'] for n in names
-            ]
+            return (
+                [
+                    client.describe_stream(StreamName=n)['StreamDescription']
+                    for n in names
+                ]
+                if names
+                else []
+            )
 
         return Terminator._create(credentials, KinesisStream, 'kinesis', paginate_streams)
 

@@ -46,7 +46,7 @@ def main():
     logger.debug('Config path: %s', config_path)
 
     def default_ctor(_dummy, tag_suffix, node):
-        return tag_suffix + ' ' + node.value
+        return f'{tag_suffix} {node.value}'
 
     yaml.add_multi_constructor('', default_ctor)
 
@@ -97,9 +97,7 @@ def parse_args():
     if argcomplete:
         argcomplete.autocomplete(parser)
 
-    args = parser.parse_args()
-
-    return args
+    return parser.parse_args()
 
 
 if __name__ == '__main__':

@@ -19,8 +19,11 @@ class Route53HostedZone(DbTerminator):
     def terminate(self):
         # remove any record sets that the zone contains
         record_sets = self.client.list_resource_record_sets(HostedZoneId=self.id)['ResourceRecordSets']
-        remove_record_sets = [record_set for record_set in record_sets if record_set['Type'] not in ('SOA', 'NS')]
-        if remove_record_sets:
+        if remove_record_sets := [
+            record_set
+            for record_set in record_sets
+            if record_set['Type'] not in ('SOA', 'NS')
+        ]:
             # Public hosted zones always contain an NS and SOA record, just try to remove the others
             self.client.change_resource_record_sets(
                 HostedZoneId=self.id,
@@ -161,7 +164,10 @@ class Ec2InternetGateway(DbTerminator):
     def ignore(self):
         if self._ignore is None:
             attachments = self._find_vpc_attachments()
-            self._ignore = any([self.is_vpc_default(attachment_id) for attachment_id in attachments])
+            self._ignore = any(
+                self.is_vpc_default(attachment_id) for attachment_id in attachments
+            )
+
         return self._ignore
 
     def _find_vpc_attachments(self):
@@ -269,7 +275,10 @@ class Ec2RouteTable(DbTerminator):
         # The main route table of a VPC cannot be deleted.
         # See: https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Route_Tables.html
         # They will be removed when the VPC is deleted.
-        return any([association['Main'] for association in self.instance.get('Associations', [])])
+        return any(
+            association['Main']
+            for association in self.instance.get('Associations', [])
+        )
 
     def terminate(self):
         for association in self.instance.get('Associations', []):
@@ -385,9 +394,7 @@ class Ec2VpcPeer(DbTerminator):
 
     @property
     def ignore(self):
-        if self.instance.get('Status', {}).get('Code') in ['rejected', 'deleted']:
-            return True
-        return False
+        return self.instance.get('Status', {}).get('Code') in ['rejected', 'deleted']
 
     def terminate(self):
         self.client.delete_vpc_peering_connection(VpcPeeringConnectionId=self.id)
