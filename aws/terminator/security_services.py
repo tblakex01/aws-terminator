@@ -176,11 +176,9 @@ class KMSKey(Terminator):
         # anything more done to it.
         if self.instance['KeyState'] == 'PendingDeletion':
             return True
-        # Don't try deleting the AWS managed keys (they're not charged for)
-        for alias in self.instance['Aliases']:
-            if alias.startswith('alias/aws/'):
-                return True
-        return False
+        return any(
+            alias.startswith('alias/aws/') for alias in self.instance['Aliases']
+        )
 
     @property
     def created_time(self):

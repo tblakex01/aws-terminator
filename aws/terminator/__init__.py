@@ -60,16 +60,13 @@ def assume_session(role: str, session_name: str) -> boto3.Session:
 
 def process_instance(instance: 'Terminator', check: bool, force: bool = False) -> str:
     if instance.ignore:
-        status = 'ignored'
-    elif force:
-        status = terminate(instance, check)
+        return 'ignored'
+    elif force or instance.age is not None and instance.stale:
+        return terminate(instance, check)
     elif instance.age is None:
-        status = 'unsupported'
-    elif instance.stale:
-        status = terminate(instance, check)
+        return 'unsupported'
     else:
-        status = 'skipped'
-    return status
+        return 'skipped'
 
 
 def cleanup_test_account(stage: str, check: bool, force: bool, api_name: str, test_account_id: str, targets: typing.Optional[typing.List[str]] = None) -> None:
@@ -120,11 +117,7 @@ def cleanup_database(check: bool, force: bool) -> None:
             for item in items:
                 kvs.table.delete_item(Key=item)
 
-    if check:
-        status = 'checked'
-    else:
-        status = 'purged'
-
+    status = 'checked' if check else 'purged'
     for item in items:
         logger.info('%s database item: %s', status, item['id'])
 
@@ -174,7 +167,7 @@ def get_tag_dict_from_tag_list(tag_list: typing.Optional[typing.List[typing.Dict
     if tag_list is None:
         return {}
 
-    return dict((tag['Key'], tag['Value']) for tag in tag_list)
+    return {tag['Key']: tag['Value'] for tag in tag_list}
 
 
 class Terminator(abc.ABC):
@@ -231,11 +224,7 @@ class Terminator(abc.ABC):
     def __str__(self) -> str:
         # noinspection PyBroadException
         try:
-            if self.id:
-                extra = f'id={self.id} '
-            else:
-                extra = ''
-
+            extra = f'id={self.id} ' if self.id else ''
             return f'{type(self).__name__}: name={self.name}, {extra}age={self.age}, stale={self.stale}'
         except Exception:  # pylint: disable=broad-except
             log_exception('exception converting %s to string', type(self).__name__)
@@ -254,9 +243,9 @@ class Terminator(abc.ABC):
     @property
     def default_vpc(self) -> typing.Dict[str, str]:
         if self._default_vpc is None:
-            vpcs = self.client.describe_vpcs(Filters=[{'Name': 'isDefault', 'Values': ['true']}])['Vpcs']
-
-            if vpcs:
+            if vpcs := self.client.describe_vpcs(
+                Filters=[{'Name': 'isDefault', 'Values': ['true']}]
+            )['Vpcs']:
                 self._default_vpc = vpcs[0]  # found default VPC
             else:
                 self._default_vpc = {}  # no default VPC

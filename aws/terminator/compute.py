@@ -348,7 +348,7 @@ class EksCluster(Terminator):
         try:
             self.client.delete_cluster(name=self.name)
         except botocore.exceptions.ClientError as ex:
-            if not ex.response['Error']['Code'] == 'ResourceInUseException':
+            if ex.response['Error']['Code'] != 'ResourceInUseException':
                 raise
 
 
@@ -387,7 +387,7 @@ class EksFargateProfile(Terminator):
         try:
             self.client.delete_fargate_profile(clusterName=self.cluster_name, fargateProfileName=self.name)
         except botocore.exceptions.ClientError as ex:
-            if not ex.response['Error']['Code'] == 'ResourceInUseException':
+            if ex.response['Error']['Code'] != 'ResourceInUseException':
                 raise
 
 
@@ -569,7 +569,7 @@ class LaunchConfiguration(Terminator):
         try:
             self.client.delete_launch_configuration(LaunchConfigurationName=self.name)
         except botocore.exceptions.ClientError as ex:
-            if not ex.response['Error']['Code'] == 'ResourceInUseFault':
+            if ex.response['Error']['Code'] != 'ResourceInUseFault':
                 raise
 
 
